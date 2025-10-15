@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Calendar, ChefHat, DollarSign, TrendingDown, BarChart3, CheckCircle, Circle, User, Target, ShoppingCart } from 'lucide-react'
+import { Calendar, ChefHat, DollarSign, TrendingDown, BarChart3, CheckCircle, Circle, User, Target, ShoppingCart, Calculator } from 'lucide-react'
 
 interface Meal {
   id: string
@@ -79,18 +79,17 @@ export default function DietApp() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [activeWeek, setActiveWeek] = useState(1)
   const [weeksData, setWeeksData] = useState<WeekData[]>(initialWeeksData)
-  const [initialWeight, setInitialWeight] = useState('')
-  const [currentWeight, setCurrentWeight] = useState('')
   const [isReduced, setIsReduced] = useState(false)
   const [currentDay, setCurrentDay] = useState(1)
+  const [currentWeightInput, setCurrentWeightInput] = useState('')
+  const [estimatedFinalWeight, setEstimatedFinalWeight] = useState<number | null>(null)
+  const [showCalculation, setShowCalculation] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('dietAppData')
     if (saved) {
       const data = JSON.parse(saved)
       setWeeksData(data.weeksData || initialWeeksData)
-      setInitialWeight(data.initialWeight || '')
-      setCurrentWeight(data.currentWeight || '')
       setIsReduced(data.isReduced || false)
       setCurrentDay(data.currentDay || 1)
     }
@@ -99,12 +98,10 @@ export default function DietApp() {
   useEffect(() => {
     localStorage.setItem('dietAppData', JSON.stringify({
       weeksData,
-      initialWeight,
-      currentWeight,
       isReduced,
       currentDay
     }))
-  }, [weeksData, initialWeight, currentWeight, isReduced, currentDay])
+  }, [weeksData, isReduced, currentDay])
 
   const toggleMealCompletion = (weekIndex: number, mealId: string) => {
     setWeeksData(prev => prev.map((week, idx) => 
@@ -127,9 +124,15 @@ export default function DietApp() {
     )
   }
 
-  const getWeightLoss = () => {
-    if (!initialWeight || !currentWeight) return 0
-    return parseFloat(initialWeight) - parseFloat(currentWeight)
+  const calculateWeightLoss = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && currentWeightInput) {
+      const currentWeight = parseFloat(currentWeightInput)
+      if (currentWeight > 0) {
+        const finalWeight = currentWeight - 9 // Subtrai 9 kg
+        setEstimatedFinalWeight(finalWeight)
+        setShowCalculation(true)
+      }
+    }
   }
 
   const startNewCycle = () => {
@@ -148,35 +151,54 @@ export default function DietApp() {
         <p className="text-lg text-green-700 mb-4">
           Perca de 5 a 9 kg em 21 dias com uma dieta prática, barata e rica em proteínas.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-green-600" />
-            <input
-              type="number"
-              placeholder="Peso inicial (kg)"
-              value={initialWeight}
-              onChange={(e) => setInitialWeight(e.target.value)}
-              className="px-3 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+        
+        {/* Calculadora de Peso */}
+        <div className="bg-white p-6 rounded-xl border border-green-300 mb-4">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Calculator className="w-6 h-6 text-green-600" />
+            <h3 className="text-xl font-semibold text-green-800">Calculadora de Peso</h3>
           </div>
-          <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-green-600" />
-            <input
-              type="number"
-              placeholder="Peso final depois do desafio (kg)"
-              value={currentWeight}
-              onChange={(e) => setCurrentWeight(e.target.value)}
-              className="px-3 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+          
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2">
+              <User className="w-5 h-5 text-green-600" />
+              <input
+                type="number"
+                placeholder="Digite seu peso atual (kg)"
+                value={currentWeightInput}
+                onChange={(e) => setCurrentWeightInput(e.target.value)}
+                onKeyDown={calculateWeightLoss}
+                className="px-4 py-3 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-center font-medium"
+              />
+            </div>
+            
+            <p className="text-sm text-green-600 font-medium">
+              Pressione Enter para calcular sua meta de peso
+            </p>
+            
+            {showCalculation && estimatedFinalWeight && (
+              <div className="bg-gradient-to-r from-green-100 to-blue-100 p-4 rounded-lg border border-green-300 w-full max-w-md">
+                <div className="text-center">
+                  <p className="text-green-800 font-semibold mb-2">🎯 Sua Meta de Peso:</p>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-700">Peso atual:</span>
+                    <span className="font-bold text-gray-800">{currentWeightInput} kg</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-gray-700">Perda estimada:</span>
+                    <span className="font-bold text-red-600">-9 kg</span>
+                  </div>
+                  <div className="border-t border-green-300 pt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700 font-semibold">Peso final:</span>
+                      <span className="font-bold text-green-800 text-xl">{estimatedFinalWeight.toFixed(1)} kg</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-        {initialWeight && currentWeight && (
-          <div className="mt-4 p-4 bg-white rounded-lg border border-green-200">
-            <p className="text-green-800 font-semibold">
-              Perda de peso: {getWeightLoss().toFixed(1)} kg
-            </p>
-          </div>
-        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
